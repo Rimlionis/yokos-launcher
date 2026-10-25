@@ -1,4 +1,4 @@
-name: Build BB10 Hub (Lawnchair 12-dev)
+me: Build BB10 Hub (Lawnchair 12-dev)
 
 on:
   push:
@@ -78,4 +78,4 @@ jobs:
         with:
           name: bb10-hub-lawnchair12-debug
           path: launcher/lawnchair/build/outputs/apk/*/debug/*.apk
-          retention-days: 90
+          retention-days
