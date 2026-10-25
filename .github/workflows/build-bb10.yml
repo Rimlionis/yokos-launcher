@@ -1,81 +1,55 @@
-me: Build BB10 Hub (Lawnchair 12-dev)
+name: Build BB10 Hub
 
 on:
   push:
-    branches:
-      - main
-      - master
+    branches: [main]
   workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    
     steps:
-      - name: Checkout BB10 Hub repo
+      - name: Checkout
         uses: actions/checkout@v4
         with:
           path: bb10-source
-      
+
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'zulu'
-      
-      - name: Clone Lawnchair 12-dev
+
+      - name: Clone Lawnchair
         run: |
-          git clone --branch 12-dev --recurse-submodules \
-            https://github.com/LawnchairLauncher/lawnchair.git launcher
+          git clone --branch 12-dev --recurse-submodules https://github.com/LawnchairLauncher/lawnchair.git launcher
           cd launcher
           git submodule update --init --recursive
-      
-      - name: Copy BB10 Hub source files
+
+      - name: Copy BB10 files
         run: |
           mkdir -p launcher/lawnchair/src/app/lawnchair/bb10hub
-          cp bb10-source/lawnchair/src/app/lawnchair/bb10hub/*.kt \
-             launcher/lawnchair/src/app/lawnchair/bb10hub/ 2>/dev/null || true
-          
-          mkdir -p launcher/lawnchair/src/main/res/values
-          mkdir -p launcher/lawnchair/src/main/res/xml
-          mkdir -p launcher/lawnchair/src/main/res/layout
-          
-          cp bb10-source/lawnchair/src/main/res/values/*.xml \
-             launcher/lawnchair/src/main/res/values/ 2>/dev/null || true
-          cp bb10-source/lawnchair/src/main/res/xml/*.xml \
-             launcher/lawnchair/src/main/res/xml/ 2>/dev/null || true
-          cp bb10-source/lawnchair/src/main/res/layout/*.xml \
-             launcher/lawnchair/src/main/res/layout/ 2>/dev/null || true
-      
-      - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v3
-      
-      - name: Make gradlew executable
+          cp bb10-source/lawnchair/src/app/lawnchair/bb10hub/*.kt launcher/lawnchair/src/app/lawnchair/bb10hub/ || true
+          mkdir -p launcher/lawnchair/src/main/res/values launcher/lawnchair/src/main/res/xml launcher/lawnchair/src/main/res/layout
+          cp bb10-source/lawnchair/src/main/res/values/*.xml launcher/lawnchair/src/main/res/values/ || true
+          cp bb10-source/lawnchair/src/main/res/xml/*.xml launcher/lawnchair/src/main/res/xml/ || true
+          cp bb10-source/lawnchair/src/main/res/layout/*.xml launcher/lawnchair/src/main/res/layout/ || true
+
+      - name: Build APK
         run: |
           cd launcher
           chmod +x gradlew
-      
-      - name: Build debug APK
+          ./gradlew assembleLawnWithQuickstepDebug --stacktrace || true
+
+      - name: Collect APKs
         run: |
-          cd launcher
-          ./gradlew assembleDebug --stacktrace 2>&1 | tee build.log
-        continue-on-error: true
-      
-      - name: Upload build log
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: build-log
-          path: launcher/build.log
-        
-      - name: Find all build outputs
-        run: |
-          echo "=== Looking for APK files ==="
-          find launcher -name "*.apk" -type f 2>/dev/null || echo "No APKs found"
-          
+          mkdir -p artifacts
+          find launcher -name "*.apk" -type f -exec cp {} artifacts/ \; || true
+          ls -la artifacts/
+
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: bb10-hub-lawnchair12-debug
-          path: launcher/lawnchair/build/outputs/apk/*/debug/*.apk
-          retention-days
+          name: bb10-hub-debug
+          path: artifacts/
+          if-no-files-found: warn
